@@ -7,7 +7,7 @@ spring:
     password: kkt1326!
 
   jpa:
-    open-in-view: false
+    #open-in-view: false
     hibernate:
       ddl-auto: create
     properties:
