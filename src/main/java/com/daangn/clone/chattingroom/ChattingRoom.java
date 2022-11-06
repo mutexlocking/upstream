@@ -4,7 +4,7 @@ import com.daangn.clone.common.BasicEntity;
 import com.daangn.clone.chattingcontent.ChattingContent;
 import com.daangn.clone.common.enums.Status;
 import com.daangn.clone.item.Item;
-import com.daangn.clone.memberchatting.MemberChatting;
+import com.daangn.clone.chattingmember.ChattingMember;
 import lombok.*;
 
 import javax.persistence.*;
@@ -37,7 +37,7 @@ public class ChattingRoom extends BasicEntity{
     private List<ChattingContent> chattingContentList = new ArrayList<>();
 
     @OneToMany(mappedBy = "chattingRoom")
-    private List<MemberChatting> memberChattingList = new ArrayList<>();
+    private List<ChattingMember> chattingMemberList = new ArrayList<>();
 
     /** [연관관계 편의 메서드]*/
 

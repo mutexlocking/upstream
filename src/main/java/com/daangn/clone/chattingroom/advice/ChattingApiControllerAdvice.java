@@ -1,19 +1,16 @@
 package com.daangn.clone.chattingroom.advice;
 
-import com.daangn.clone.chattingroom.controller.ChattingApiController;
+import com.daangn.clone.chattingroom.controller.ChattingController;
 import com.daangn.clone.common.response.ApiException;
 import com.daangn.clone.common.response.ApiResponse;
-import com.daangn.clone.common.response.ApiResponseStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import static com.daangn.clone.common.response.ApiResponseStatus.*;
-
 @Slf4j
-@RestControllerAdvice(assignableTypes = ChattingApiController.class)
+@RestControllerAdvice(assignableTypes = ChattingController.class)
 public class ChattingApiControllerAdvice {
 
     @ExceptionHandler

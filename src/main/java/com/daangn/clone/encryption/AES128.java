@@ -61,7 +61,7 @@ public class AES128 {
             byte[] encrypted = encryptCipher.doFinal(str.getBytes("UTF-8"));
             return new String(Base64.encodeBase64(encrypted));
         } catch (Exception e) {
-            throw new ApiException(ApiResponseStatus.FAIL_SAVE_IMAGE, "로컬에 저장한 이미지의 경로를 암호화 하는 과정에를 예외가 터졌습니다.");
+            throw new ApiException(ApiResponseStatus.FAIL_ENCRYPT, "AES128 암호화 하는 과정에를 예외가 터졌습니다.");
         }
     }
 
@@ -70,7 +70,7 @@ public class AES128 {
             byte[] byteStr = Base64.decodeBase64(str.getBytes());
             return new String(decryptCipher.doFinal(byteStr), "UTF-8");
         } catch (Exception e) {
-            throw new ApiException(ApiResponseStatus.FAIL_GET_ITEM_IMAGE,"넘어온 암호화된 경로를 복호화 하는 과정에서 예외가 터졌습니다.");
+            throw new ApiException(ApiResponseStatus.FAIL_DECRYPT,"AES128 복호화 하는 과정에서 예외가 터졌습니다.");
         }
     }
 

@@ -1,9 +1,10 @@
 package com.daangn.clone.item.service;
 
-import com.daangn.clone.category.Category;
 import com.daangn.clone.category.repository.CategoryRepository;
+import com.daangn.clone.chattingroom.repository.ChattingRoomRepository;
 import com.daangn.clone.common.enums.DelYn;
-import com.daangn.clone.common.enums.SaleSituation;
+import com.daangn.clone.common.enums.ItemStatus;
+import com.daangn.clone.common.enums.Role;
 import com.daangn.clone.common.response.ApiException;
 import com.daangn.clone.common.response.ApiResponseStatus;
 import com.daangn.clone.encryption.AES128;
@@ -17,6 +18,7 @@ import com.daangn.clone.itemimage.ItemImage;
 import com.daangn.clone.itemimage.repository.ItemImageRepository;
 import com.daangn.clone.member.Member;
 import com.daangn.clone.member.repository.MemberRepository;
+import com.daangn.clone.chattingmember.ChattingMember;
 import com.daangn.clone.town.repository.TownRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,17 +30,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static com.daangn.clone.common.enums.ItemStatus.*;
 import static com.daangn.clone.common.response.ApiResponseStatus.FAIL_GET_ITEM_LIST;
-import static com.daangn.clone.item.QItem.item;
 
 @Slf4j
 @Service
@@ -59,6 +56,7 @@ public class ItemService{
     private final CategoryRepository categoryRepository;
     private final MemberRepository memberRepository;
     private final TownRepository townRepository;
+    private final ChattingRoomRepository chattingRoomRepository;
 
     private final FileServiceUtil fileServiceUtil;
     private final AES128 aes128;
@@ -105,7 +103,7 @@ public class ItemService{
                 .sellerMemberName(item.getSellerMember().getNickname())
                 .createdAt(item.getCreatedAt())
                 .delYn(item.getDelYn())
-                .saleSituation(item.getSalesituation())
+                .itemStatus(item.getItemStatus())
                 .numOfWish(item.getWishList().size())
                 .numOfChattingRoom(item.getChattingRoomList().size())
                 .itemImagePathList(encrpytedPathList)
@@ -120,7 +118,7 @@ public class ItemService{
                                             int page, int limit,
                                             Long townId,
                                             SortCriteria sortCriteria,
-                                            Long categoryId, SaleSituation situation){
+                                            Long categoryId, ItemStatus itemStatus){
 
         //0. 유효성 검사 : 설정한 townId가 , 그 사용자가 속한 town과 관련된 town의 Id 인지 검사
         /** 실제 당근마켓에서는 여러 town들이 설정될 수 있지만, 여기서는 사용자와 Item모두 하나의 town에 속한다는 가정 */
@@ -133,7 +131,7 @@ public class ItemService{
         /** 그냥 순수 Item으로 조회하면 , Item의 필드 중 , content 필드도 함꼐 조회해오는데 , 이게 양이 어마어마할 수 있음.
          * 따라서 DB에 무리가 가는 작업을 막기 위해 , ItemSummaryDto에 필요한 컬럼만 추출하는 [DTO로 조회하기] 를 사용 */
         List<Item> itemList = itemRepository.searchItems(townId,
-                categoryId, situation, sortCriteria.getSpecifier(), page, limit);
+                categoryId, itemStatus, sortCriteria.getSpecifier(), page, limit);
 
 //        List<ItemSummaryDto> itemSummaryDtoList = itemRepository.searchItemSummaryDtos(townId,
 //                categoryId, situation, sortCriteria.getSpecifier(), page, limit);
@@ -147,7 +145,8 @@ public class ItemService{
         //2_2. 조회한 상품이 하나라도 있다면 - 조회한 DTO 그 자체를 반환
         return itemList.stream().map(i -> ItemSummaryDto.builder()
                 .itemId(i.getId()).title(i.getTitle()).townName(i.getTown().getName()).createdAt(i.getCreatedAt())
-                .price(i.getPrice()).itemImageUrl(i.getItemImageList().get(0).getPath())
+                .price(i.getPrice())
+                        .itemImageUrl(fileServiceUtil.getEncryptedPathList(i, sampleDir, aes128).get(0))
                 .numOfWish(i.getWishList().size()).numOfChattingRoomList(i.getChattingRoomList().size()).build())
                 .collect(Collectors.toList());
         //return itemSummaryDtoList;
@@ -236,7 +235,7 @@ public class ItemService{
                 .price(registerItemDto.getPrice())
                 .visitCount(0)
                 .delYn(DelYn.N)
-                .salesituation(SaleSituation.FOR_SALE)
+                .itemStatus(FOR_SALE)
                 .sellerMemberId(sellerMember.getId())
                 .categoryId(registerItemDto.getCategoryId())
                 .townId(registerItemDto.getTownId())
@@ -248,6 +247,229 @@ public class ItemService{
                 .map(p -> ItemImage.builder().path(p).itemId(item.getId()).build())
                 .collect(Collectors.toList());
     }
+
+    /**
+     * [유효성 체크 로직] : 채팅을 시도한 EXPECTED_BUYER들의 목록을 가져오는 서비스의 검증 로직
+     * */
+    private void checkGetExpectedBuyers(String username, Long itemId){
+
+        //  결국 그 Item을 올린 판매자가 == username으로 된 Member가 맞는지를 검증
+
+        // 1. 이게 일치하려면 일단 itemId가 진짜 유효한 상품의 id 여야 함은 물론이고
+        // 2. 나아가 그 id로 된 Item의 sellerMember가 == username으로 된 Member 여야 한다.
+        Item item = itemRepository.findItemById(itemId).orElseThrow(
+                () -> {
+                    throw new ApiException(ApiResponseStatus.INVALID_ITEM_ID, "EXPECTED_BUYERS 조회시 : 해당 id를 가진 Item은 존재하지 않습니다.");
+                }
+        );
+
+        if(item.getSellerMember().getId()!=memberRepository.findByUsername(username).getId()){
+            throw new ApiException(ApiResponseStatus.INVALID_ITEM_ID, "EXPECTED_BUYERS 조회시 : 해당 상품이 , 해당 username의 Member가 올린 상품이 아닙니다.");
+        }
+    }
+
+
+    /**
+     * [이 아이템에게 채팅을 시도한 예비 구매자들 목록 조회 서비스]
+     * -> 결국 이들중에서만 진짜 구매자가 나오게 되어 있다. (서비스가 실제로 그렇게 동작)
+     * */
+
+    public ExpectedBuyerDto getExpectedBuyers(String username, Long itemId){
+
+        //0. 유효성 체크 -> 이를 통과하면 결국 해당 Item은 해당 Member가 올린 상품이라는것이 증명이 됨
+        /** 그래야 이 아이템에게 채팅을 요청한 예비 구매자들을 조회 가능하게 됨 (그럴 권한이 주어진다고 판단 가능)*/
+        checkGetExpectedBuyers(username, itemId);
+
+        //1. 해당 상품에 채팅을 요청한 모든 EXPECTED_BUYER들을 조회
+
+        /** 여기서 무작정 Item과 연관된 ChattingRoomList를 페치조인하면 안됨.
+         * 만약 연관된 ChattingRoomList가 없을 경우 , 조회되는 결과는 null이고 , 그에따라 NPE 가 발생함.
+         * -> 즉 어쩔 수 없이 LAZY LOADING을 쓸 수 밖에 없는 상황 */
+        Item item = itemRepository.findOne(itemId);
+
+        //단 이 상품에 대해 채팅을 요청한 사람이 한명도 없으면 , 바로 리턴
+        if(CollectionUtils.isEmpty(item.getChattingRoomList())){
+            return ExpectedBuyerDto.builder()
+                    .numOfExpectedBuyer(0)
+                    .expectedBuyerIdList(new ArrayList<>())
+                    .itemId(itemId).build();
+        }
+
+        //채팅룸이 하나라도 열렸다면 -> 그에 따른 MemberChattingList와 Member도 모두 존재한다는 의미이므로
+        //이들을 페치조인으로 한꺼번에 조회한 후 -> 그중엥서 EXPECTED_BUYER들만 필터링하여 리턴한다 (그 ID값만)
+        List<Long> idListOfexpectedBuyerMembers = getBuyerIdList(item);
+
+        return ExpectedBuyerDto.builder()
+                .numOfExpectedBuyer(idListOfexpectedBuyerMembers.size())
+                .expectedBuyerIdList(idListOfexpectedBuyerMembers)
+                .itemId(itemId)
+                .build();
+
+    }
+
+    /** [해당 Item의 EXPECTED_BUYER들의 IdList를 반환하는 내부 로직]*/
+    private List<Long> getBuyerIdList(Item item){
+        List<ChattingMember> chattingMemberList = new ArrayList<>();
+        //어차피 각 ChattingRoom 별로 연관되 MemberChatting은 2개밖에 없으니까 -> 그냥 일일이 add 해주면 됨
+        item.getChattingRoomList().stream()
+                .map(cr -> chattingRoomRepository.findOneWithMember(cr.getId()))
+                .peek(cr -> chattingMemberList.add(cr.getChattingMemberList().get(0)))
+                .forEach(cr -> chattingMemberList.add(cr.getChattingMemberList().get(1)));
+
+        //그렇게 1차원 리스트로 모아진 MemberChattingList에서 -> EXPECTED_BUYER들만으로 필터링 하여 리턴
+        return  chattingMemberList.stream()
+                .filter(mc -> mc.getRole() == Role.EXPECTED_BUYER)
+                .map(mc -> mc.getMember().getId())
+                .collect(Collectors.toList());
+    }
+
+
+    /**
+     * [판매 상태 변경에 대한 검증 로직]
+     *
+     * 1. 판매중으로 변경시
+     * -> 그 이전 상태가 예약중 or 판매완료 여야 한다
+     * -> 그리고 설정되었던 buyerMemberId가 지워져야 한다.
+     *
+     * 2. 예약중으로 변경시
+     * -> 그 이전 상태가 판매중 or 판매완료 여야 한다.
+     * -> 또한 채팅을 보냈던 EXPECTED_BUYER들 중 한명으로 예약자를 선택할 수 있다. (그렇지 않다면 예외)
+     *
+     * 3. 판매완료로 변경시
+     * -> 그 이전 상태가 판매중 or 예약중이어야 하고
+     * -> 판매중에서 판매 완료로 변경시에는 , 채팅을 보냈던 EXPECTED_BUYER들 중 한명으로만 구매자를 선택할 수 있고
+     * -> 만약 예약중에서 판매완료로 변경하는 경우에는 -> 자동으로 판매 완료로 변경할 때 , 예약자로 선택한 사람에게 판매가 완료된다
+     *
+     * */
+    private void checkChangeToFOR_SALE(String username, Long itemId){
+
+        //결국 itemId가 유효해야 하고 , 그 Item이 이 Member가 올린 상품이어야 한다는 검증 로직이 여기서도 적용되어야 하므로 , 메서드 호출
+        checkGetExpectedBuyers(username, itemId);
+
+        //이제 username, itemId에 대한 검증은 마쳤으니 , nextSituation에 관련한 검증 시작
+        Item item = itemRepository.findOne(itemId);
+
+        if(item.getItemStatus()==ItemStatus.FOR_SALE){
+            throw new ApiException(ApiResponseStatus.INVALID_PREV_SITUATION, "판매중으로 변경시 : 이전 상품 상태가 예약완료 or 판매완료 인 경우에만 , 상품 상태를 판매중으로 변경시킬 수 있습니다.");
+        }
+
+    }
+
+    private void checkChangeToRESERVED(String username, Long itemId, Long buyerMemberId){
+
+        //결국 itemId가 유효해야 하고 , 그 Item이 이 Member가 올린 상품이어야 한다는 검증 로직이 여기서도 적용되어야 하므로 , 메서드 호출
+        checkGetExpectedBuyers(username, itemId);
+
+        //이제 username, itemId에 대한 검증은 마쳤으니 , nextSituation에 관련한 검증 시작
+        Item item = itemRepository.findOne(itemId);
+
+        if(item.getItemStatus()== RESERVED){
+            throw new ApiException(ApiResponseStatus.INVALID_PREV_SITUATION, "예약중으로 변경시 : 이전 상품 상태가 판매중 or 판매완료 인 경우에만 , 상품 상태를 예약중으로 변경시킬 수 있습니다.");
+        }
+
+        //마지막으로 예약하고자 하는 Member의 Id값은 , 채팅을 보낸 EXPECTED_BUYERS들의 Id 중 하나여야 한다
+        if(CollectionUtils.containsAny(getBuyerIdList(item), buyerMemberId)==false){
+            throw new ApiException(ApiResponseStatus.INVALID_RESERVE_MEMBER, "예약중으로 변경시 : 예약할 수 있는 사용자는, 해당 상품의 상세페이지에서 채팅을 시도한 사람으로 한정됩니다.");
+        }
+
+    }
+
+    private void checkChangeToSOLD_OUT(String username, Long itemId, Long buyerMemberId){
+
+        //결국 itemId가 유효해야 하고 , 그 Item이 이 Member가 올린 상품이어야 한다는 검증 로직이 여기서도 적용되어야 하므로 , 메서드 호출
+        checkGetExpectedBuyers(username, itemId);
+
+        //이제 username, itemId에 대한 검증은 마쳤으니 , nextSituation에 관련한 검증 시작
+        Item item = itemRepository.findOne(itemId);
+
+        if(item.getItemStatus()==SOLD_OUT){
+            throw new ApiException(ApiResponseStatus.INVALID_PREV_SITUATION, "판매완료로 변경시 : 이전 상품 상태가 판매중 or 예약중 인 경우에만 , 상품 상태를 판매완료로 변경시킬 수 있습니다.");
+        }
+
+        //마지막으로 예약하고자 하는 Member의 Id값은 ,
+        // 예약중에서 -> 판매완료로 변경하는 경우는 , 그 Member가 같아야 하고 (즉 같지 않으면 예외)
+        // 판매중에서 -> 거래완료로 변경하는 경우는 , 채팅을 건 EXPECTED_BUYERS 들 중에 하나여야 한다. (즉 이들중 한명이 아니면 예외)
+        else if(item.getItemStatus()==RESERVED && buyerMemberId!=item.getBuyer_member_id()){
+            throw new ApiException(ApiResponseStatus.FAIL_CHANGE_TO_SOLD_OUT, "판매완료로 변경시 : 예약중에서 변경시에는 예약한 그 사용자에게 자동으로 상품이 판매됩니다. 별도의 판매자를 선택할수 없습니다. ");
+        }
+        else if(item.getItemStatus()==FOR_SALE && !CollectionUtils.containsAny(getBuyerIdList(item), buyerMemberId)){
+            throw new ApiException(ApiResponseStatus.FAIL_CHANGE_TO_SOLD_OUT, "판매완료로 변경시 : 판매중에서 변경시에는, 채팅을 시도한 EXPECTED_BUYER들 중 한명에게만 상품을 판매할 수 있습니다.");
+        }
+    }
+
+    /**
+     * [판매 상태를 변경시키는 서비스]
+     * */
+    @Transactional
+    public ChangedSituationDto changeToFOR_SALE(String username, Long itemId){
+
+        //0. 검증 로직
+        checkChangeToFOR_SALE(username, itemId);
+
+        //1. 상품 상태를 판매중으로 변경하고 && buyerMemberId 값을 null로 비워줌
+        changeItemStatus(itemId, FOR_SALE);
+        changeBuyerMemberId(itemId, null);
+
+        return ChangedSituationDto.builder()
+                .changedItemStatus(FOR_SALE)
+                .buyerMemberId(null)
+                .changedItemId(itemId)
+                .build();
+    }
+
+    @Transactional
+    public ChangedSituationDto changeToRESERVED(String username, Long itemId, Long buyermemberId){
+
+        //0. 검증 로직
+        checkChangeToRESERVED(username, itemId, buyermemberId);
+
+        //1. 상품 상태를 예약중으로 변경하고 && buyerMemberId 값을 넘어온 값으로 설정해줌
+        // 어차피 위 검증로직에서 , 이 Item은 이 username의 사용자가 올린게 맞고
+        // 또한 예약자도 EXPECTED_BUYERS 들 중 하나라는게 검증되었으니!
+        changeItemStatus(itemId, RESERVED);
+        changeBuyerMemberId(itemId, buyermemberId);
+
+        return ChangedSituationDto.builder()
+                .changedItemStatus(RESERVED)
+                .buyerMemberId(buyermemberId)
+                .changedItemId(itemId)
+                .build();
+    }
+
+    @Transactional
+    public ChangedSituationDto changeToSOLD_OUT(String username, Long itemId, Long buyerMemberId){
+
+        //0. 검증 로직
+        checkChangeToSOLD_OUT(username, itemId, buyerMemberId);
+
+        //1. 상품 상태를 예약중으로 변경하고 && buyerMemberId 값을 넘어온 값으로 설정해줌
+        changeItemStatus(itemId, SOLD_OUT);
+        changeBuyerMemberId(itemId, buyerMemberId);
+
+        return ChangedSituationDto.builder()
+                .changedItemStatus(SOLD_OUT)
+                .buyerMemberId(buyerMemberId)
+                .changedItemId(itemId)
+                .build();
+    }
+
+    /**
+     * [dirty checking을 통한 변경 로직들]
+     * */
+
+    private void changeItemStatus(Long itemId, ItemStatus nextItemStatus){
+        //이미 itemId가 검증된 후에 사용하는거니까 -> Optional없이 바로 Item으로 리턴받을 수 있는것
+        Item item = itemRepository.findOne(itemId);
+        item.changeItemStatus(nextItemStatus);
+    }
+
+    private void changeBuyerMemberId(Long itemId, Long buyerMemberId){
+        //이미 itemId가 검증된 후에 사용하는거니까 -> Optional없이 바로 Item으로 리턴받을 수 있는것
+        Item item = itemRepository.findOne(itemId);
+        item.changeBuyerMemberId(buyerMemberId);
+
+    }
+
 
 
 

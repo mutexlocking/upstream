@@ -2,6 +2,7 @@ package com.daangn.clone.common.advice;
 
 import com.daangn.clone.common.response.ApiResponse;
 import com.daangn.clone.common.response.ApiResponseStatus;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.impl.FileSizeLimitExceededException;
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException;
@@ -28,5 +29,12 @@ public class GlobalAdvice {
     public ApiResponse maxRequestSizeExHandler(SizeLimitExceededException e){
         log.error("EXCEPTION = {} , INTERNAL_MESSAGE = {}", e, e.getMessage());
         return ApiResponse.fail(ApiResponseStatus.MAX_REQUEST_SIZE_EXCEEDED);
+    }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse expiredJwtExHandler(ExpiredJwtException e){
+        log.error("EXCEPTION = {} , INTERNAL_MESSAGE = {}", e, e.getMessage());
+        return ApiResponse.fail(ApiResponseStatus.INVALID_JWT_TOKEN);
     }
 }

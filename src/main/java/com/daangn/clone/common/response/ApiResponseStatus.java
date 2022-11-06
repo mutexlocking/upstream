@@ -19,7 +19,7 @@ import lombok.Getter;
  *  6 : wish 오류
  *  7 : chattingRoom 오류
  *  8 : chattingContent 오류
- *  9 : memberChatting 오류
+ *  9 : ChattingMember 오류
  *
  *
  * [10단위] - 오류 HTTP Method
@@ -60,13 +60,17 @@ public enum ApiResponseStatus {
     INVALID_OFFSET(false, 2006, "offset 값은 0 이상인 정수깂 이어야 합니다."),
     INVALID_LIMIT(false, 2007, "limit 값은 자연수 값이어야 합니다."),
     INVALID_ENUM(false, 2008, "정의되지 않은 enum 값이 들어왔습니다."),
+    FAIL_ENCRYPT(false, 2009, "AES128 암호화 ㄷ과정에서 예와가 발생하였습니다."),
+    FAIL_DECRYPT(false, 2010, "AES128 복호화 과정에서 예외가 발생하였습니다."),
+    NO_JWT_TOKEN(false, 2011, "인증 인가를 위한 jwt token값이 존재하지 않습니다."),
+    INVALID_JWT_TOKEN(false, 2012, "인증 인가를 위한 jwt token값이 유효하지 않습니다."),
+    INVALID_TOWN_NAME(false, 2013, "유효하지 않는 행정동 입니다"),
+    INVALID_CHATTING_ROOM(false, 2021, "로컬에 저장된 채팅룸 데이터는 잘못된 데이터 입니다."),
 
-    INVALID_PASSWORD(false, 2142, "유효하지 않은 PASSWORD 입니다."),
+    NESTED_USERNAME(false, 2101, "이미 사용중인 아이디 입니다."),
+    NESTED_NICKNAME(false, 2102, "이미 사용중인 닉네임 입니다."),
+    FAIL_LOGIN(false, 2103, "로그인에 실패하였습니다."),
 
-
-
-    EXIST_USERNAME(false, 2143, "이미 존재하는 USERNAME 입니다."),
-    EXIST_NICKNAME(false, 2144, "이미 존재하는 NICKNAME 입니다."),
 
 
     FAIL_GET_ITEM(false, 2221, "상품 조회에 실패했습니다."),
@@ -82,18 +86,29 @@ public enum ApiResponseStatus {
 
 
     INVALID_CATEGORY(false, 2501, "유효하지 않는 카테고리 입니다."),
-    INVALID_TOWN_NAME(false, 2502, "유효하지 않는 town 입니다"),
     INVALID_ITEM_ID(false, 2503, "유효하지 않은 Item Id 입니다"),
     INVALID_ITEM_IMAGE_PATH(false, 2504, "유효하지 않은 상품 이미지 경로 입니다."),
     NO_ITEMLIST(false, 2505, "더이상 등록된 Item이 없습니다."),
 
     INVALID_DELYN(false, 2261, "구매 확정 으로 상품 상태 정보를 변경하고자 한다면 다른 API를 호출하셔야 합니다."),
     INVALID_CHANGE_DELYN(false, 2262, "이 사용자는 해당 아이템의 DelYn 상태를 변경할 수 없습니다."),
+    INVALID_PREV_SITUATION(false,2263, "상품 상태 변경시에 있어, 이전 상품 상태가 유효하지 않습니다."),
+    INVALID_RESERVE_MEMBER(false, 2264, "상품 상태 변경시에 있어, 예약자가 유효하지 않습니다."),
+    INVALID_BUYER_MEMBER(false, 2265, "상품 상태 변경시에 있어, 구매자 유효하지 않습니다."),
+    FAIL_CHANGE_TO_SOLD_OUT(false, 2266, "상품 상태 변경시에 있어, 판매 완료로 변경하는데 실패했습니다."),
+
 
     FAIL_CREATE_CHATTING_ROOM(false, 2741, "채팅을 위한 채팅 룸 생성에 실패했습니다."),
+    INVALID_ROOM_INFO(false, 2742, "채팅룸 및 참여자 정보가 잘못되었습니다."),
+
 
     FAIL_SAVE_CHATTING(false, 2801, "채팅 데이터를 저장하는데 실패했습니다."),
+    NO_NOT_READ_MESSAGE(false,2821, "더이상 아직 읽지 않은 메세지가 없습니다."),
+    INVALID_SEND_MESSAGE(false, 2841, "메세지를 보낼 채팅 룸 ID or 상대방 Member ID가 잘못되었습니다."),
+    SAME_SENDER_RECEIVER(false, 2842, "메세지를 보내는 송신자와 수신자가 같을수는 없습니다."),
     FAIL_ENTER_CHATTING_ROOM(false,2861, "채팅방 입장 여부를 나타내는 MemberChatting의 InRoomYn 값을 업데이트 하는데 실패하여 , 채팅방 입장.퇴장에 실패하였습니다."),
+
+
 
     /**
      * 3000 : Response 오류

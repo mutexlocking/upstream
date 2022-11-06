@@ -1,7 +1,7 @@
 package com.daangn.clone.item.dto.paging;
 
 import com.daangn.clone.common.enums.DelYn;
-import com.daangn.clone.common.enums.SaleSituation;
+import com.daangn.clone.common.enums.ItemStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,7 +33,7 @@ public class ItemsReq {
     @Positive(message = "categoryId 값은 양수인 정수 입니다.")
     private Long categoryId;
 
-    private SaleSituation situation;
+    private ItemStatus itemStatus;
 
 
 }

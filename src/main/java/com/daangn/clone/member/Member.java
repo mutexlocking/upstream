@@ -3,11 +3,10 @@ package com.daangn.clone.member;
 import com.daangn.clone.common.BasicEntity;
 import com.daangn.clone.common.enums.Status;
 import com.daangn.clone.item.Item;
-import com.daangn.clone.memberchatting.MemberChatting;
+import com.daangn.clone.chattingmember.ChattingMember;
 import com.daangn.clone.town.Town;
 import com.daangn.clone.wish.Wish;
 import lombok.*;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import javax.persistence.*;
@@ -47,7 +46,7 @@ public class Member extends BasicEntity {
     private List<Wish> wishList = new ArrayList<>();
 
     @OneToMany(mappedBy = "member")
-    private List<MemberChatting> memberChattingList = new ArrayList<>();
+    private List<ChattingMember> chattingMemberList = new ArrayList<>();
 
 
     /** [연관관계 편의 메서드] */

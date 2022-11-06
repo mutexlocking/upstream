@@ -8,10 +8,12 @@ import lombok.*;
 @Builder
 public class ChattingDto {
 
-    private Long myMemberId;
+    private Long memberId;
     private Long targetMemberId;
     private Long itemId;
-    private Long memberChattingId;
     private Long chattingRoomId;
+    private Long chattingMemberId;
+    private Long targetChattingMemberId;
+
 
 }

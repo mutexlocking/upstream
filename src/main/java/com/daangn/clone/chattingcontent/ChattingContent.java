@@ -2,7 +2,6 @@ package com.daangn.clone.chattingcontent;
 
 import com.daangn.clone.common.BasicEntity;
 import com.daangn.clone.chattingroom.ChattingRoom;
-import com.daangn.clone.common.enums.ReadYn;
 import lombok.*;
 
 import javax.persistence.*;
@@ -28,8 +27,12 @@ public class ChattingContent extends BasicEntity{
     @Column(name = "chatting_room_id")
     private Long chattingRoomId;
 
-    @Enumerated(EnumType.STRING)
-    private ReadYn readYn;
+
+    @Column(name = "target_member_id")
+    private Long targetMemberId;
+
+    @Column(name = "ack_content_id")
+    private Long ackContentId;
 
     /** [연관관계 편의 메서드]*/
 
@@ -40,12 +43,13 @@ public class ChattingContent extends BasicEntity{
     }
 
     /** [생성자]*/
-    public ChattingContent(String content, ReadYn readYn, ChattingRoom chattingRoom) {
+    public ChattingContent(String content, ChattingRoom chattingRoom) {
         this.content = content;
-        this.readYn = readYn;
 
         if(chattingRoom!=null){
             setChattingRoom(chattingRoom);
         }
     }
+
+
 }

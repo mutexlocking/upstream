@@ -4,7 +4,7 @@ import com.daangn.clone.common.BasicEntity;
 import com.daangn.clone.category.Category;
 import com.daangn.clone.chattingroom.ChattingRoom;
 import com.daangn.clone.common.enums.DelYn;
-import com.daangn.clone.common.enums.SaleSituation;
+import com.daangn.clone.common.enums.ItemStatus;
 import com.daangn.clone.itemimage.ItemImage;
 import com.daangn.clone.member.Member;
 import com.daangn.clone.town.Town;
@@ -39,8 +39,8 @@ public class Item extends BasicEntity{
     private DelYn delYn;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "sale_situation")
-    private SaleSituation salesituation;
+    @Column(name = "item_status")
+    private ItemStatus itemStatus;
 
     @JoinColumn(name = "seller_member_id", insertable = false, updatable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -76,9 +76,9 @@ public class Item extends BasicEntity{
     @Column(name = "buyer_member_id")
     private Long buyer_member_id;
 
-    @JoinColumn(name = "buyer_memeber_id")
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Member buyerMember;
+    @Column(name = "reserved_member_id")
+    private Long reserved_member_id;
+
 
     /** [연관관계 편의 메서드]*/
 
@@ -107,13 +107,13 @@ public class Item extends BasicEntity{
     }
 
     /** [생성자]*/
-    public Item(String title, String content, Long price, int visitCount, DelYn delYn, SaleSituation saleSituation, Member sellerMember, Category category, Town town) {
+    public Item(String title, String content, Long price, int visitCount, DelYn delYn, ItemStatus saleSituation, Member sellerMember, Category category, Town town) {
         this.title = title;
         this.content = content;
         this.price = price;
         this.visitCount = visitCount;
         this.delYn = delYn;
-        this.salesituation = saleSituation;
+        this.itemStatus = saleSituation;
 
         if(sellerMember!=null){
             setSellerMember(sellerMember);
@@ -145,7 +145,12 @@ public class Item extends BasicEntity{
     }
 
     /** [SaleSituation 값 변경] */
-    public void changeSaleSituation(SaleSituation situation){
-        this.salesituation = situation;
+    public void changeItemStatus(ItemStatus itemStatus){
+        this.itemStatus = itemStatus;
+    }
+
+    /** [buyerMemberId 값 변경] */
+    public void changeBuyerMemberId(Long buyerMemberId){
+        this.buyer_member_id = buyerMemberId;
     }
 }

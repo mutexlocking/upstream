@@ -44,6 +44,9 @@ dependencies {
 	// JSON
 	implementation group: 'org.json', name: 'json', version: '20090211'
 
+	//토큰 생성을 위한
+	implementation 'io.jsonwebtoken:jjwt:0.9.1'
+
 
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'mysql:mysql-connector-java'
