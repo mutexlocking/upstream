@@ -1,13 +1,12 @@
 package com.daangn.clone.item.advice;
 
-import com.daangn.clone.common.exception.UnsupportedFileExt;
 import com.daangn.clone.common.response.ApiException;
 import com.daangn.clone.common.response.ApiResponse;
 import com.daangn.clone.common.response.ApiResponseStatus;
 import com.daangn.clone.common.response.validation.ValidationFail;
 import com.daangn.clone.common.response.validation.ValidationFailForField;
 import com.daangn.clone.common.response.validation.ValidationFailForObject;
-import com.daangn.clone.item.controller.ItemApiController;
+import com.daangn.clone.item.controller.ItemController;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,7 +24,7 @@ import static com.daangn.clone.common.response.ApiResponseStatus.*;
 
 
 @Slf4j
-@RestControllerAdvice(assignableTypes = ItemApiController.class)
+@RestControllerAdvice(assignableTypes = ItemController.class)
 public class ItemApiControllerAdvice {
 
 
@@ -92,6 +91,7 @@ public class ItemApiControllerAdvice {
 //        return ApiResponse.failWithInput(INVALID_FILE_EXT , e.getMessage());
 //    }
 
+    /** 정의되지 않은 enum값이 넘어왔을 때 터지는 Exception을 처리하는 ExceptionHandler */
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse inCorrectEnum(HttpMessageNotReadableException e){

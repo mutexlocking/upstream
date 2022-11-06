@@ -12,12 +12,12 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class CategoryApiController {
+public class CategoryController {
 
     private final CategoryService categoryService;
 
 
-    /** [15번 API] */
+    /** [API] */
     @GetMapping("/category/all")
     public ApiResponse<List<CategoryDto>> getCategoryAll(){
 

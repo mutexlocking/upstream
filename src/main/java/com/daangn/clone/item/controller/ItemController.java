@@ -1,36 +1,35 @@
 package com.daangn.clone.item.controller;
 
 
-import com.daangn.clone.item.dto.ItemDto;
-import com.daangn.clone.item.dto.RegisterItemDto;
-import com.daangn.clone.category.service.CategoryService;
-import com.daangn.clone.item.dto.RegistserItemReq;
+import com.daangn.clone.common.enums.ItemStatus;
+import com.daangn.clone.item.dto.*;
 import com.daangn.clone.item.dto.paging.ItemSummaryDto;
 import com.daangn.clone.item.dto.paging.ItemsReq;
 import com.daangn.clone.item.service.ItemService;
 import com.daangn.clone.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+
+import static com.daangn.clone.common.enums.ItemStatus.FOR_SALE;
+import static com.daangn.clone.common.enums.ItemStatus.RESERVED;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-public class ItemApiController {
+public class ItemController {
 
     private final ItemService itemService;
 
 
 
-    /** [9번 API] : 최신 상품 목록 조회 - 페이징 사용 , 이때 어떤 town의 Item을 볼지는 외부 요청에 의해 받는걸로! */
+    /** [API] : 최신 상품 목록 조회 - 페이징 사용 , 이때 어떤 town의 Item을 볼지는 외부 요청에 의해 받는걸로! */
     @GetMapping("/items")
-    public ApiResponse<List<ItemSummaryDto>> getItemList(@RequestHeader String username,
+    public ApiResponse<List<ItemSummaryDto>> getItemList(@RequestAttribute String username,
                                                          @Validated @ModelAttribute ItemsReq itemsReq){
 
          //아이템 목록 조회하여 반환
@@ -39,12 +38,12 @@ public class ItemApiController {
                 itemsReq.getPage(), itemsReq.getLimit(),
                 itemsReq.getTownId(),
                 itemsReq.getSortCriteria(),
-                itemsReq.getCategoryId(), itemsReq.getSituation()));
+                itemsReq.getCategoryId(), itemsReq.getItemStatus()));
 
 
     }
 
-   /** [13번 API] : 상품 이미지 조회
+   /** [API] : 상품 이미지 조회
     *  png 이미지 파일과 jpeg 이미지 파일만 요청할 수 있고 - png 이미지 파일과 jpeg 이미지 파일만 로드해서 보내준다.
     *  단 , 어차피 실제 Item과 연관된 상품 이미지인지의 여부는 확인하지 않을 것 이고, 단순히 복호화하여 byte값을 보내줄 것이다.*/
     @GetMapping(value = "/itemImage")
@@ -54,7 +53,7 @@ public class ItemApiController {
         return itemService.getItemImage(path);
     }
 
-    /** [12번 API] : 특정 상품 조회 */
+    /** [API] : 특정 상품 조회 */
     @GetMapping("/item/{itemId}")
     public ApiResponse<ItemDto> getItem(@PathVariable Long itemId){
 
@@ -63,10 +62,10 @@ public class ItemApiController {
     }
 
 
-    /** [14번 API] : 상품 등록 */
+    /** [API] : 상품 등록 */
 
     @PostMapping("/item")
-    public ApiResponse<Long> registerItem (@RequestHeader  String username,
+    public ApiResponse<Long> registerItem (@RequestAttribute  String username,
                                            @Validated @ModelAttribute RegistserItemReq request){
 
         /** POST 전송 방식이지만 , 이미지라는 binary data를 전송해야 하고 - 그러기위해서는 multi part form data 전송방식으로 데이터를
@@ -92,7 +91,33 @@ public class ItemApiController {
     }
 
 
+    /** [API] : 해당 Item에 채팅을 시도한 EXPECTED_BUYER들을 조회하는 기능 */
+    @GetMapping("/item/buyers/{itemId}")
+    public ApiResponse<ExpectedBuyerDto> getExpectedBuyers(@RequestAttribute String username, @PathVariable Long itemId){
+        return ApiResponse.success(itemService.getExpectedBuyers(username, itemId));
+    }
 
+    /**
+     * [API] : 상품의 ItemStatus 변경
+     *
+     *  1. 해당 아이템에 대해 채팅 요청을 한 사용자들 중에서 구매자를 선택하고
+     *      -> 만약 그 안에서 구매자가 선택되지 않는다면 예외
+     *  2. 해당 아이템의 SaleSituation 값을 SOLD_OUT 으로 변경한다.
+     *
+     * */
+    @PatchMapping("/item/{itemId}/{buyerMemberId}")
+    public ApiResponse<ChangedSituationDto> changeSaleSituation(@RequestAttribute String username,
+                                                                @PathVariable Long itemId, @PathVariable Long buyerMemberId,
+                                                                @RequestParam ItemStatus itemStatus){
+        if(itemStatus == FOR_SALE){
+            return ApiResponse.success(itemService.changeToFOR_SALE(username, itemId));
+        } else if(itemStatus == RESERVED){
+            return ApiResponse.success(itemService.changeToRESERVED(username, itemId, buyerMemberId));
+        } else{
+            return ApiResponse.success(itemService.changeToSOLD_OUT(username, itemId, buyerMemberId));
+        }
+
+    }
 
 
 

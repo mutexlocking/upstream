@@ -10,6 +10,6 @@ import java.util.List;
 @Builder
 public class ChattingListDto {
 
-    private Integer sizeOfChatting;
     private List<ChattingDto> chattingDtoList;
+    private Integer sizeOfChatting;
 }

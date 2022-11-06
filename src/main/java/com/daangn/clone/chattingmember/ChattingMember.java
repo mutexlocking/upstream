@@ -1,4 +1,4 @@
-package com.daangn.clone.memberchatting;
+package com.daangn.clone.chattingmember;
 
 import com.daangn.clone.common.BasicEntity;
 import com.daangn.clone.chattingroom.ChattingRoom;
@@ -11,21 +11,19 @@ import javax.persistence.*;
 
 @Entity
 @Getter @Setter
-@Table(name = "member_chatting")
+@Table(name = "chatting_member")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class MemberChatting extends BasicEntity{
+public class ChattingMember extends BasicEntity{
 
     @Id @GeneratedValue
-    @Column(name = "member_chatting_id")
+    @Column(name = "chatting_member_id")
     private Long id;
 
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @Enumerated(EnumType.STRING)
-    private InRoomYn inRoomYn;
 
     @JoinColumn(name = "member_id", insertable = false, updatable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,24 +39,26 @@ public class MemberChatting extends BasicEntity{
     @Column(name = "chatting_room_id")
     private Long chattingRoomId;
 
+    @Column(name = "last_read_content_id")
+    private Long lastReadContentId;
+
     /** [연관관계 편의 메서드]*/
 
     //MemberChatting과 Member
     public void setMember(Member member){
         this.member = member;
-        member.getMemberChattingList().add(this);
+        member.getChattingMemberList().add(this);
     }
 
     //MemberChatting과 ChattingRoom
     public void setChattingRoom(ChattingRoom chattingRoom){
         this.chattingRoom = chattingRoom;
-        chattingRoom.getMemberChattingList().add(this);
+        chattingRoom.getChattingMemberList().add(this);
     }
 
     /** [생성자]*/
-    public MemberChatting(Role role, InRoomYn inRoomYn, Member member, ChattingRoom chattingRoom) {
+    public ChattingMember(Role role, Member member, ChattingRoom chattingRoom) {
         this.role = role;
-        this.inRoomYn = inRoomYn;
 
         if(member != null){
             setMember(member);
@@ -70,8 +70,4 @@ public class MemberChatting extends BasicEntity{
 
     }
 
-    /** [필드 변경 메서드]*/
-    public void updateInRoomYn(InRoomYn yn){
-        this.inRoomYn = yn;
-    }
 }

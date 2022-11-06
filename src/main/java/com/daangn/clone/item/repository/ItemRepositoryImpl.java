@@ -1,7 +1,7 @@
 package com.daangn.clone.item.repository;
 
 import com.daangn.clone.common.enums.DelYn;
-import com.daangn.clone.common.enums.SaleSituation;
+import com.daangn.clone.common.enums.ItemStatus;
 import com.daangn.clone.item.Item;
 import com.daangn.clone.item.dto.paging.ItemSummaryDto;
 import com.querydsl.core.QueryResults;
@@ -29,7 +29,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom{
     }
 
     @Override
-    public List<ItemSummaryDto> searchItemSummaryDtos(Long townId, Long categoryIdCond, SaleSituation situationCond, OrderSpecifier specifier, int offset, int limit) {
+    public List<ItemSummaryDto> searchItemSummaryDtos(Long townId, Long categoryIdCond, ItemStatus situationCond, OrderSpecifier specifier, int offset, int limit) {
         return queryFactory
                 .select(Projections.bean(ItemSummaryDto.class,
                         item.id,
@@ -42,7 +42,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom{
                         item.chattingRoomList.size().as("numOfChattingRoomList")))
                 .from(item)
                 .innerJoin(item.town, town)
-                .where(delYnEq(DelYn.N), townIdEq(townId), categoryIdEq(categoryIdCond), situationEq(situationCond))
+                .where(delYnEq(DelYn.N), townIdEq(townId), categoryIdEq(categoryIdCond), itemStatusEq(situationCond))
                 .orderBy(specifier)
                 .offset(offset*limit)
                 .limit(limit)
@@ -50,12 +50,12 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom{
     }
 
     @Override
-    public List<Item> searchItems(Long townId, Long categoryIdCond, SaleSituation situationCond,
+    public List<Item> searchItems(Long townId, Long categoryIdCond, ItemStatus itemStatusCond,
                                           OrderSpecifier specifier, int offset, int limit) {
         return queryFactory
                 .selectFrom(item)
                 .innerJoin(item.town, town)
-                .where(delYnEq(DelYn.N), townIdEq(townId), categoryIdEq(categoryIdCond), situationEq(situationCond))
+                .where(delYnEq(DelYn.N), townIdEq(townId), categoryIdEq(categoryIdCond), itemStatusEq(itemStatusCond))
                 .orderBy(specifier)
                 .offset(offset*limit) //주의
                 .limit(limit)
@@ -76,7 +76,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom{
     }
 
     //선택조건
-    private Predicate situationEq(SaleSituation situationCond) {
-        return situationCond!=null ? item.salesituation.eq(situationCond) : null;
+    private Predicate itemStatusEq(ItemStatus itemStatusCond) {
+        return itemStatusCond!=null ? item.itemStatus.eq(itemStatusCond) : null;
     }
 }

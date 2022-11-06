@@ -38,6 +38,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> , ItemReposito
 
 
 
+
+
     /** (1) Town이나 Category나 where문의 대상이 되므로 어차피 이들을 대상으로는 fetch join을 못씀
      *      fetch join 대신에 inner join을 사용하여 , 해당 Item과 연관된 Town과 Category 정보를 함께 가져올 수는 O(100프로 확신은 x - 확인 필요)
      *  (2) 그렇다면 아쉬운 대로 itemImages or wishList or chattingRoomList 들중 하나라도 fetch join해오자 라고 생각할 수 있지만,
